@@ -791,6 +791,24 @@ class Comm:
     save_traces_file_prefix: str = "rank_"
     """Flight recorder trace files prefix"""
 
+    fake_backend: bool = False
+    """Fake comm backend for dry run mode only"""
+
+    local_tensor_mode: bool = False
+    """
+    Local tensor mode for debugging purposes. There will be only one process
+    regardless of the number of GPUs. LocalTensor will simulate the
+    computation by running one rank after another. While the performance will
+    be slow, the numerics should be the same. This enables us to verify
+    numerics with fewer GPUs. For example, we can directly run 5D
+    parallelisms within a single node to reduce the combinations we need to
+    use in integration tests.
+
+    NOTE: This is an experimental feature.
+
+    NOTE: fake_backend should be set to True when local_tensor_mode is True.
+    """
+
 
 @dataclass
 class MemoryEstimation:

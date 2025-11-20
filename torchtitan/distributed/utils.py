@@ -258,12 +258,43 @@ def maybe_enable_amp(
             )
 
 
+def init_fake_mode(world_size: int) -> int:
+    """Initialize fake backend
+
+    Args:
+        world_size: The number of GPUs to simulate
+
+    Returns:
+        The world size
+    """
+    torch.distributed.init_process_group(
+        "fake",
+        rank=0,
+        world_size=world_size,
+    )
+    return world_size
+
+
 def init_distributed(
     comm_config: CommConfig,
     enable_cpu_backend: bool = False,
     base_folder: str = "",
     ranks: list[int] | None = None,
-):
+) -> int:
+    if comm_config.fake_backend:
+        ngpu_str = os.environ.get("NGPU")
+        if ngpu_str is None:
+            raise ValueError(
+                "NGPU environment variable must be set when using local_tensor_mode"
+            )
+        try:
+            world_size = int(ngpu_str)
+        except ValueError as e:
+            raise ValueError(
+                f"NGPU environment variable must be a valid integer, got: {ngpu_str}"
+            ) from e
+        return init_fake_mode(world_size)
+
     def _warn_overwrite_env(env, val):
         if env in os.environ:
             logger.warning(
@@ -308,6 +339,8 @@ def init_distributed(
         timeout=timedelta(seconds=comm_config.init_timeout_seconds),
         _ranks=ranks if ranks is not None else [],
     )
+
+    return torch.distributed.get_world_size()
 
 
 def set_pg_timeouts(timeout, world_mesh):
